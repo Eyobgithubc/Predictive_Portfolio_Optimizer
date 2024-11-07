@@ -1,0 +1,6 @@
+{
+    "python.pythonPath": "C:/Users/AYUBO/Sentiment-Driven-Financial-Forecasting/myenv/Scripts/python.exe",
+    "python.analysis.extraPaths": [
+        "./scripts"
+    ]
+}
