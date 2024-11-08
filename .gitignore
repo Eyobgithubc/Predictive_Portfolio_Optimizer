@@ -1,5 +1,6 @@
 .venv
 data
+*.pyc
 
 notebook/arima_model.pkl
 notebook/lstm_model.pkl
