@@ -16,7 +16,7 @@ def download_data(tickers, start_date, end_date):
 
 def clean_data(data):
     """Handle missing values by forward filling and then dropping any remaining NaNs."""
-    data.fillna(method='ffill', inplace=True)
+    
     data.dropna(inplace=True)
     return data
 
