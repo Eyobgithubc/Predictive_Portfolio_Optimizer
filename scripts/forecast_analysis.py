@@ -6,15 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras.preprocessing.sequence import TimeseriesGenerator
 
 def load_lstm_model(pkl_file_path):
-    """
-    Load the saved LSTM model from a pickle file.
-
-    Parameters:
-        pkl_file_path: str, path to the saved LSTM model (.pkl)
-
-    Returns:
-        model: Loaded LSTM model.
-    """
+   
     with open(pkl_file_path, 'rb') as file:
         model = pickle.load(file)
     return model
@@ -26,101 +18,65 @@ def prepare_data_for_lstm(data, sequence_length=60):
     generator = TimeseriesGenerator(scaled_data, scaled_data, length=sequence_length, batch_size=32)
     return generator, scaler
 
-def generate_forecast(model, forecast_steps):
-    """
-    Generates a forecast using the loaded LSTM model.
+
+
+def generate_forecast(model, data, forecast_steps):
     
-    Parameters:
-        model: Trained LSTM model.
-        forecast_steps: int, the number of future time steps to forecast.
-        
-    Returns:
-        forecast: np.array of forecasted values.
-    """
-    return model.predict(forecast_steps)
+    forecast = []
+    input_data = data[-1:]  
+    
+ 
+    input_data = np.array(input_data)
+    
+    for _ in range(forecast_steps):
+      
+        input_data_reshaped = input_data.reshape((1, 1, 1)) 
+   
+        predicted_value = model.predict(input_data_reshaped)
+  
+        forecast.append(predicted_value[0, 0])
+
+        input_data = np.append(input_data, predicted_value)[-1:]
+
+    return np.array(forecast)
+
 
 def calculate_confidence_intervals(forecast, confidence_interval=0.10):
-    """
-    Calculate upper and lower confidence intervals for the forecast.
     
-    Parameters:
-        forecast: np.array, forecasted values.
-        confidence_interval: float, the percentage for confidence interval range (e.g., 0.10 for ±10%).
-        
-    Returns:
-        forecast_upper: np.array, upper confidence interval values.
-        forecast_lower: np.array, lower confidence interval values.
-    """
     forecast_upper = forecast * (1 + confidence_interval)
     forecast_lower = forecast * (1 - confidence_interval)
     return forecast_upper, forecast_lower
 
-def visualize_forecast(historical_data, forecast, forecast_upper, forecast_lower, forecast_dates):
-    """
-    Plot historical and forecasted data with confidence intervals.
-    
-    Parameters:
-        historical_data: pd.Series or pd.DataFrame, historical time series data.
-        forecast: pd.Series, forecasted data.
-        forecast_upper: pd.Series, upper confidence interval.
-        forecast_lower: pd.Series, lower confidence interval.
-        forecast_dates: pd.DatetimeIndex, dates for the forecasted values.
-    """
-    plt.figure(figsize=(12, 6))
-    plt.plot(historical_data.index, historical_data, label="Historical Data", color='blue')
-    plt.plot(forecast.index, forecast, label="Forecasted Data", color="orange")
-    plt.fill_between(forecast.index, forecast_lower, forecast_upper, color="gray", alpha=0.3, label="Confidence Interval")
+def visualize_forecast(original_data, forecast_data):
+   
+    plt.figure(figsize=(10, 6))
+    plt.plot(original_data, label='Original Data', color='blue')
+    plt.plot(range(len(original_data), len(original_data) + len(forecast_data)), forecast_data, 
+             label='Forecast', color='red', linestyle='--')
     plt.legend()
-    plt.title("Tesla Stock Price Forecast with Confidence Intervals")
-    plt.xlabel("Date")
-    plt.ylabel("Price")
+    plt.xlabel('Time')
+    plt.ylabel('Value')
+    plt.title('Original Data vs. Forecast')
     plt.show()
 
 def analyze_trend(forecast):
-    """
-    Analyze the trend of the forecast.
+   
+
+    trend_direction = "upward" if forecast[-1] > forecast[0] else "downward" if forecast[-1] < forecast[0] else "stable"
     
-    Parameters:
-        forecast: pd.Series, forecasted data.
-        
-    Returns:
-        trend_analysis: str, description of the forecast trend direction.
-    """
-    trend_direction = "upward" if forecast.iloc[-1] > forecast.iloc[0] else "downward" if forecast.iloc[-1] < forecast.iloc[0] else "stable"
     return f"The forecasted trend is {trend_direction}."
 
-def detect_anomalies(forecast, forecast_upper, forecast_lower):
-    """
-    Detect anomalies in the forecast where values exceed confidence intervals.
-    
-    Parameters:
-        forecast: pd.Series, forecasted data.
-        forecast_upper: pd.Series, upper confidence interval.
-        forecast_lower: pd.Series, lower confidence interval.
-        
-    Returns:
-        pattern_analysis: str, description of anomaly detection results.
-    """
-    anomalies = np.where((forecast > forecast_upper) | (forecast < forecast_lower))[0]
-    if len(anomalies) > 0:
-        return f"Anomalies detected at {len(anomalies)} points in the forecast range."
-    else:
-        return "No significant anomalies detected in the forecast."
 
 def calculate_volatility(forecast, historical_data):
-    """
-    Calculate and compare forecast volatility with historical volatility.
+   
+   
+    forecast_series = pd.Series(forecast)
+    historical_series = pd.Series(historical_data)
     
-    Parameters:
-        forecast: pd.Series, forecasted data.
-        historical_data: pd.Series or pd.DataFrame, historical time series data.
-        
-    Returns:
-        volatility_analysis: str, description of volatility analysis.
-        forecast_volatility_summary: pd.Series, summary statistics of forecast volatility.
-    """
-    forecast_volatility = forecast.rolling(window=30).std()  # 30-day rolling standard deviation
-    historical_volatility = historical_data.rolling(window=30).std()
+    
+    forecast_volatility = forecast_series.rolling(window=30).std()  
+    historical_volatility = historical_series.rolling(window=30).std()
+    
     
     if forecast_volatility.mean() > historical_volatility.mean():
         volatility_analysis = "The forecast shows increased volatility compared to historical levels."
@@ -129,60 +85,63 @@ def calculate_volatility(forecast, historical_data):
     
     return volatility_analysis, forecast_volatility.describe()
 
+
+
 def assess_market_opportunities(trend_analysis, volatility_analysis):
-    """
-    Assess potential market opportunities and risks based on trend and volatility analysis.
+  
     
-    Parameters:
-        trend_analysis: str, description of the trend analysis.
-        volatility_analysis: str, description of the volatility analysis.
+    
+    print(f"trend_analysis: {trend_analysis} (type: {type(trend_analysis)})")
+    print(f"volatility_analysis: {volatility_analysis} (type: {type(volatility_analysis)})")
+    
+   
+    if isinstance(trend_analysis, tuple):
+        trend_analysis = trend_analysis[0] 
+    
+   
+    if isinstance(trend_analysis, str):
+        trend_contains_upward = "upward" in trend_analysis.lower()  
+    else:
+        trend_contains_upward = False
+
+    
+    if isinstance(volatility_analysis, tuple):
+        print("volatility_analysis is a tuple.")
+       
+        if isinstance(volatility_analysis[0], str):
+            volatility_analysis_str = volatility_analysis[0]
+            print(f"volatility_analysis (string description): {volatility_analysis_str}")
+            volatility_contains_decreased = "decreased volatility" in volatility_analysis_str.lower()
+        elif isinstance(volatility_analysis[1], pd.Series):
+            volatility_analysis_data = volatility_analysis[1]
+            print(f"volatility_analysis (numerical data): {volatility_analysis_data}")
+            volatility_mean = volatility_analysis_data.mean()
+            volatility_contains_decreased = volatility_mean < 0.01  
+        else:
+            print(f"Unexpected format in volatility_analysis tuple: {volatility_analysis}")
+            raise ValueError("volatility_analysis tuple is in an unexpected format.")
+    
+    elif isinstance(volatility_analysis, pd.Series):
+        print("volatility_analysis is a pandas Series.")
+       
+        volatility_mean = volatility_analysis.mean()
+        volatility_contains_decreased = volatility_mean < 0.01  
+    elif isinstance(volatility_analysis, str):
+        print("volatility_analysis is a string.")
         
-    Returns:
-        market_assessment: str, description of potential market opportunities and risks.
-    """
-    if "upward" in trend_analysis and "decreased volatility" in volatility_analysis:
+        volatility_contains_decreased = "decreased volatility" in volatility_analysis.lower()
+    else:
+        print(f"Unexpected type for volatility_analysis: {type(volatility_analysis)}")
+        raise ValueError(f"Unexpected type for volatility_analysis: {type(volatility_analysis)}")
+    
+    
+    print(f"trend_contains_upward: {trend_contains_upward}")
+    print(f"volatility_contains_decreased: {volatility_contains_decreased}")
+    
+    
+    if trend_contains_upward and volatility_contains_decreased:
         return "There may be an opportunity for gains with lower risk in this period."
-    elif "downward" in trend_analysis and "increased volatility" in volatility_analysis:
+    elif "downward" in trend_analysis.lower() and "increased volatility" in volatility_analysis[0].lower():  # Fix here
         return "Potential for losses with higher risk; exercise caution in this period."
     else:
         return "The market shows mixed indicators; evaluate carefully before proceeding."
-
-def forecast_analysis_lstm(model_path, historical_data, forecast_steps=365, confidence_interval=0.10):
-    """
-    Main function to load the model, perform the forecast, and conduct analysis.
-    
-    Parameters:
-        model_path: str, path to the saved LSTM model (.pkl).
-        historical_data: pd.Series or pd.DataFrame, historical time series data.
-        forecast_steps: int, number of future time steps to forecast.
-        confidence_interval: float, confidence interval range (e.g., 0.10 for ±10%).
-        
-    Returns:
-        insights: dict with analysis and interpretations of trends, volatility, and risks.
-    """
-    # Load model and generate forecast
-    model = load_lstm_model(model_path)
-    forecast = generate_forecast(model, forecast_steps)
-    
-    # Calculate confidence intervals
-    forecast_upper, forecast_lower = calculate_confidence_intervals(forecast, confidence_interval)
-    
-    # Prepare data for plotting
-    forecast_dates = pd.date_range(start=historical_data.index[-1] + pd.Timedelta(days=1), periods=forecast_steps, freq='B')
-    forecast = pd.Series(forecast, index=forecast_dates)
-    forecast_upper = pd.Series(forecast_upper, index=forecast_dates)
-    forecast_lower = pd.Series(forecast_lower, index=forecast_dates)
-    
-    # Visualization
-    visualize_forecast(historical_data, forecast, forecast_upper, forecast_lower, forecast_dates)
-    
-    # Insights
-    insights = {}
-    insights["Trend Analysis"] = analyze_trend(forecast)
-    insights["Pattern Analysis"] = detect_anomalies(forecast, forecast_upper, forecast_lower)
-    volatility_analysis, forecast_volatility_summary = calculate_volatility(forecast, historical_data)
-    insights["Volatility Analysis"] = volatility_analysis
-    insights["Forecast Volatility Summary"] = forecast_volatility_summary
-    insights["Market Opportunities and Risks"] = assess_market_opportunities(insights["Trend Analysis"], insights["Volatility Analysis"])
-    
-    return insights
