@@ -1,8 +1,9 @@
 .venv
 data
+*.pyc
 
 notebook/arima_model.pkl
 notebook/lstm_model.pkl
 notebook/sarima_model.pkl
-__pycache__/
-*.pyc
+
+
