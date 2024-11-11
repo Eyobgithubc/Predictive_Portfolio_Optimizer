@@ -3,32 +3,32 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.stats import norm
 import matplotlib.pyplot as plt
+from tabulate import tabulate
 
-
-def create_portfolio_dataframe(tsla_forecast, bnd_forecast, spy_forecast):
+def create_portfolio_dataframe(tsla_forecast):
     df = pd.DataFrame({
-        'TSLA': tsla_forecast['Close'],
-        'BND': bnd_forecast['Close'],
-        'SPY': spy_forecast['Close']
+        'TSLA': tsla_forecast['Close']
+        
     })
     return df
 
 
 def calculate_annual_returns(df):
-    daily_returns = df.pct_change().dropna()
-    annual_returns = daily_returns.mean() * 252
-    return annual_returns, daily_returns
+   
+    daily_returns = df.pct_change().dropna()  
+    annual_returns = daily_returns.mean() * 252 
+    return annual_returns, daily_returns  
+
+
+
 
 
 def calculate_covariance_matrix(daily_returns):
     return daily_returns.cov() * 252  
-
-
 def calculate_portfolio_performance(weights, annual_returns, cov_matrix):
     portfolio_return = np.dot(weights, annual_returns)
     portfolio_volatility = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
     return portfolio_return, portfolio_volatility
-
 
 def negative_sharpe(weights, annual_returns, cov_matrix, risk_free_rate=0.02):
     port_return, port_volatility = calculate_portfolio_performance(weights, annual_returns, cov_matrix)
@@ -72,10 +72,15 @@ def summarize_portfolio_performance(optimal_weights, annual_returns, cov_matrix,
     portfolio_return, portfolio_volatility = calculate_portfolio_performance(optimal_weights, annual_returns, cov_matrix)
     sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_volatility
 
+ 
     summary = {
         "Expected Annual Return": portfolio_return,
         "Annualized Volatility": portfolio_volatility,
         "Sharpe Ratio": sharpe_ratio,
         "Optimal Weights": optimal_weights
     }
+
+    summary_table = [(k, v) for k, v in summary.items()]
+    print(tabulate(summary_table, headers=["Metric", "Value"], tablefmt="fancy_grid"))
+
     return summary
