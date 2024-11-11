@@ -4,3 +4,5 @@ data
 notebook/arima_model.pkl
 notebook/lstm_model.pkl
 notebook/sarima_model.pkl
+notebook\tsla_forecast.pkl
+scripts/__pycache__/portfolio_optimization.cpython-312.pyc
